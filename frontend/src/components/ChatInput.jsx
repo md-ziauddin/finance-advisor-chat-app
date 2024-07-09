@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Box, IconButton, InputBase, Paper } from "@mui/material";
+import { Badge, Box, IconButton, InputBase, Paper } from "@mui/material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import SendIcon from "@mui/icons-material/Send";
 
@@ -61,7 +61,9 @@ const ChatInput = ({ handleNewMessage }) => {
         onChange={handleFileChange}
       />
       <IconButton onClick={() => fileInputRef.current.click()}>
-        <AttachFileIcon />
+        <Badge badgeContent={selectedFile !== null ? 1 : 0} color="info">
+          <AttachFileIcon />
+        </Badge>
       </IconButton>
       <InputBase
         sx={{ flex: 1, marginLeft: "8px" }}

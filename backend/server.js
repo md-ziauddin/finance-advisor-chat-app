@@ -178,10 +178,14 @@ async function getPreviousMessage(threadId) {
 app.use(cors());
 
 // Route to open a new thread
-app.get("/thread", (req, res) => {
-  createThread().then((thread) => {
+app.get("/thread", async (req, res) => {
+  try {
+    const thread = await createThread();
     res.json({ threadId: thread.id });
-  });
+  } catch (error) {
+    console.error("Error creating thread: ", error);
+    res.status(500).json({ error: "Error creating thread" });
+  }
 });
 
 // Route to add a message to a thread and run the assistant
@@ -204,17 +208,18 @@ app.post("/message", upload.single("file"), async (req, res) => {
     }
   }
 
-  addMessage(threadId, message, fileId).then((message) => {
-    // Run the assistant
-    runAssistant(threadId).then((run) => {
-      const runId = run.id;
+  try {
+    const addedMessage = await addMessage(threadId, message, fileId);
+    const run = await runAssistant(threadId);
+    const runId = run.id;
 
-      // Check the status
-      pollingInterval = setInterval(() => {
-        checkingStatus(res, threadId, runId);
-      }, 5000);
-    });
-  });
+    pollingInterval = setInterval(() => {
+      checkingStatus(res, threadId, runId);
+    }, 5000);
+  } catch (error) {
+    console.error("Error adding message or running assistant: ", error);
+    res.status(500).json({ error: "An error occurred" });
+  }
 });
 
 // Route to handle new messages
@@ -267,34 +272,39 @@ app.post("/previousMessages", async (req, res) => {
 
   console.log({ threadId });
 
-  const response = await getPreviousMessage(threadId);
-
-  res.status(200).json({ data: response.data.reverse() });
+  try {
+    const response = await getPreviousMessage(threadId);
+    res.status(200).json({ data: response.data.reverse() });
+  } catch (error) {
+    console.error("Error getting previous messages: ", error);
+    res.status(500).json({ error: "Error getting previous messages" });
+  }
 });
 
 // Route to get all threads
-app.get("/getThreads", async (req, res) => {
-  // Check if file exists
-  if (fs.existsSync(filePath)) {
-    // Read the existing file
-    fs.readFile(filePath, "utf8", (err, data) => {
-      if (err) {
-        res.status(500).json({ message: "Error reading file" });
-      }
+app.get("/getThreads", (req, res) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.readFile(filePath, "utf8", (err, data) => {
+        if (err) {
+          res.status(500).json({ message: "Error reading file" });
+        }
 
-      // Parse the existing data
-      let threadList = [];
-      try {
-        threadList = JSON.parse(data);
-      } catch (err) {
-        res.status(500).json({ message: "Error parsing JSON data" });
-      }
+        let threadList = [];
+        try {
+          threadList = JSON.parse(data);
+        } catch (err) {
+          res.status(500).json({ message: "Error parsing JSON data" });
+        }
 
-      // return
-      res.status(200).json({ data: threadList });
-    });
-  } else {
-    res.status(500).json({ message: "No thread found!" });
+        res.status(200).json({ data: threadList });
+      });
+    } else {
+      res.status(500).json({ message: "No thread found!" });
+    }
+  } catch (error) {
+    console.error("Error getting threads: ", error);
+    res.status(500).json({ error: "An error occurred" });
   }
 });
 
@@ -305,7 +315,7 @@ app.use("/create-assistance", async (req, res) => {
     const body = {
       name,
       instructions,
-      tools: [{ type: "code_interpreter" }],
+      tools: [{ type: "file_search" }],
       model,
     };
     const assistance = await openai.beta.assistants.create(body);
@@ -314,6 +324,7 @@ app.use("/create-assistance", async (req, res) => {
       data: assistance,
     });
   } catch (error) {
+    console.error("Error creating assistance: ", error);
     res.status(500).json({ message: "Internal server error", error });
   }
 });

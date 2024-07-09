@@ -101,7 +101,7 @@ const ChatScreen = ({ messages, isMessageLoading = false }) => {
                     {message.newMessage && index === messages.length - 1 ? (
                       <TypingEffectMarkdown
                         text={content.text.value}
-                        speed={50}
+                        speed={10}
                       />
                     ) : (
                       <ReactMarkdown key={idx} children={content.text.value} />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, CssBaseline } from "@mui/material";
+import { Alert, Box, CssBaseline, Snackbar } from "@mui/material";
 import ThreadList from "./components/ThreadList";
 import ChatScreen from "./components/ChatScreen";
 import ChatInput from "./components/ChatInput";
@@ -11,19 +11,31 @@ const App = () => {
 
   const [threadId, setThreadId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorState, setErrorState] = useState({
+    open: false,
+    message: "",
+  });
 
   /**
    * Fetches the list of threads when the component mounts.
    */
   useEffect(() => {
     async function fetchThread() {
-      const response = await fetch("http://localhost:3000/getThreads");
-      const data = await response.json();
+      try {
+        const response = await fetch("http://localhost:3000/getThreads");
+        const data = await response.json();
 
-      dispatch({
-        type: TYPES.UPDATE_THREADS,
-        payload: data.data,
-      });
+        dispatch({
+          type: TYPES.UPDATE_THREADS,
+          payload: data.data,
+        });
+      } catch (error) {
+        console.log("Unable to fetch threads");
+        setErrorState({
+          open: true,
+          message: "Unable to fetch threads",
+        });
+      }
     }
 
     fetchThread();
@@ -34,32 +46,40 @@ const App = () => {
    * @param {string} id - The ID of the thread.
    */
   const fetchPreviousMessage = async (id) => {
-    setThreadId(id);
+    try {
+      setThreadId(id);
 
-    const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
 
-    const raw = JSON.stringify({
-      threadId: id,
-    });
+      const raw = JSON.stringify({
+        threadId: id,
+      });
 
-    const requestOptions = {
-      method: "POST",
-      headers: myHeaders,
-      body: raw,
-      redirect: "follow",
-    };
+      const requestOptions = {
+        method: "POST",
+        headers: myHeaders,
+        body: raw,
+        redirect: "follow",
+      };
 
-    const res = await fetch(
-      "http://localhost:3000/previousMessages",
-      requestOptions
-    );
-    const data = await res.json();
+      const res = await fetch(
+        "http://localhost:3000/previousMessages",
+        requestOptions
+      );
+      const data = await res.json();
 
-    dispatch({
-      type: TYPES.UPDATE_MESSAGE_PREVIOUS,
-      payload: data.data,
-    });
+      dispatch({
+        type: TYPES.UPDATE_MESSAGE_PREVIOUS,
+        payload: data.data,
+      });
+    } catch (error) {
+      console.log("Unable to fetch threads");
+      setErrorState({
+        open: true,
+        message: "Unable to fetch threads",
+      });
+    }
   };
 
   /**
@@ -111,7 +131,11 @@ const App = () => {
         payload: messagedata.messages,
       });
     } catch (error) {
-      console.log({ error });
+      console.log("Unable to create new message");
+      setErrorState({
+        open: true,
+        message: "Unable to create new message",
+      });
     } finally {
       setLoading(false);
     }
@@ -125,6 +149,27 @@ const App = () => {
     dispatch({
       type: TYPES.UPDATE_MESSAGE_PREVIOUS,
       payload: [],
+    });
+  };
+
+  // Resetting the error state
+  useEffect(() => {
+    if (errorState.open) {
+      const timer = setTimeout(() => {
+        setErrorState({
+          open: false,
+          message: "",
+        });
+      }, 6000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [errorState]);
+
+  const handleClose = () => {
+    setErrorState({
+      open: false,
+      message: "",
     });
   };
 
@@ -160,6 +205,20 @@ const App = () => {
           <ChatInput handleNewMessage={handleNewMessage} />
         </Box>
       </Box>
+      <Snackbar
+        open={errorState.open}
+        autoHideDuration={6000}
+        onClose={handleClose}
+      >
+        <Alert
+          onClose={handleClose}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {errorState.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

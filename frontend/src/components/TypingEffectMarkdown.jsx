@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
-const TypingEffectMarkdown = ({ text, speed = 50 }) => {
+const TypingEffectMarkdown = ({ text, speed = 10 }) => {
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {
